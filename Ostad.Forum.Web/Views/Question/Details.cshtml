@@ -1,5 +1,4 @@
 @model Ostad.Forum.Web.Models.QuestionDetailsViewModel
-
 @{
     ViewData["Title"] = Model.Title;
 }
@@ -8,18 +7,47 @@
     <a asp-controller="Home" asp-action="Index" class="text-decoration-none">&larr; Back to questions</a>
 </div>
 
+@* Main question with voting *@
 <div class="card mb-4">
-    <div class="card-body">
-        <h1 class="card-title h3">@Model.Title</h1>
-        <p class="text-muted small mb-2">
-            Asked @Model.CreatedAt.ToString("dd MMM yyyy 'at' HH:mm") &middot; @Model.ViewCount views &middot; in @Model.CategoryName
-            @if (Model.TagNames.Any())
-            {
-                <span> &middot; @string.Join(", ", Model.TagNames)</span>
-            }
-        </p>
-        <p class="mb-0">@Model.Description</p>
-        <p class="text-muted small mt-2 mb-0">By @Model.AuthorName</p>
+    <div class="card-body d-flex">
+        @if (User.Identity?.IsAuthenticated ?? false)
+        {
+            <div class="d-flex flex-column align-items-center me-3">
+                <form asp-controller="Vote" asp-action="Question" method="post" class="mb-0">
+                    <input type="hidden" name="questionId" value="@Model.QuestionId" />
+                    <input type="hidden" name="up" value="true" />
+                    <input type="hidden" name="returnQuestionId" value="@Model.QuestionId" />
+                    <button type="submit" class="btn btn-link p-0 text-secondary" title="Upvote">▲</button>
+                </form>
+                <span class="fw-semibold">@Model.QuestionScore</span>
+                <form asp-controller="Vote" asp-action="Question" method="post" class="mb-0">
+                    <input type="hidden" name="questionId" value="@Model.QuestionId" />
+                    <input type="hidden" name="up" value="false" />
+                    <input type="hidden" name="returnQuestionId" value="@Model.QuestionId" />
+                    <button type="submit" class="btn btn-link p-0 text-secondary" title="Downvote">▼</button>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column align-items-center me-3 text-muted">
+                <span>▲</span>
+                <span class="fw-semibold">@Model.QuestionScore</span>
+                <span>▼</span>
+            </div>
+        }
+        <div class="flex-grow-1">
+            <h1 class="card-title h3">@Model.Title</h1>
+            <p class="text-muted small mb-2">
+                Asked @Model.CreatedAt.ToString("dd MMM yyyy 'at' HH:mm") &middot; @Model.ViewCount views &middot; in @Model.CategoryName
+                @if (Model.TagNames.Any())
+                {
+                    <span> &middot; @string.Join(", ", Model.TagNames)</span>
+                }
+            </p>
+            <p class="mb-0">@Model.Description</p>
+            <p class="text-muted small mt-2 mb-0">By @Model.AuthorName</p>
+        </div>
     </div>
 </div>
 
@@ -30,9 +58,37 @@
     @foreach (var answer in Model.Answers)
     {
         <div class="card mb-3">
-            <div class="card-body">
-                <p class="mb-0">@answer.Content</p>
-                <p class="text-muted small mt-2 mb-0">@answer.AuthorName &middot; @answer.CreatedAt.ToString("dd MMM yyyy HH:mm")</p>
+            <div class="card-body d-flex">
+                @if (User.Identity?.IsAuthenticated ?? false)
+                {
+                    <div class="d-flex flex-column align-items-center me-3">
+                        <form asp-controller="Vote" asp-action="Answer" method="post" class="mb-0">
+                            <input type="hidden" name="answerId" value="@answer.AnswerId" />
+                            <input type="hidden" name="up" value="true" />
+                            <input type="hidden" name="questionId" value="@Model.QuestionId" />
+                            <button type="submit" class="btn btn-link p-0 text-secondary" title="Upvote">▲</button>
+                        </form>
+                        <span class="fw-semibold">@answer.Score</span>
+                        <form asp-controller="Vote" asp-action="Answer" method="post" class="mb-0">
+                            <input type="hidden" name="answerId" value="@answer.AnswerId" />
+                            <input type="hidden" name="up" value="false" />
+                            <input type="hidden" name="questionId" value="@Model.QuestionId" />
+                            <button type="submit" class="btn btn-link p-0 text-secondary" title="Downvote">▼</button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column align-items-center me-3 text-muted">
+                        <span>▲</span>
+                        <span class="fw-semibold">@answer.Score</span>
+                        <span>▼</span>
+                    </div>
+                }
+                <div class="flex-grow-1">
+                    <p class="mb-0">@answer.Content</p>
+                    <p class="text-muted small mt-2 mb-0">@answer.AuthorName &middot; @answer.CreatedAt.ToString("dd MMM yyyy HH:mm")</p>
+                </div>
             </div>
         </div>
     }
@@ -67,6 +123,6 @@ else
 else
 {
     <div class="alert alert-info mt-4">
-        <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path">Log in</a> to post an answer.
+        <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path">Log in</a> to post an answer or vote.
     </div>
 }

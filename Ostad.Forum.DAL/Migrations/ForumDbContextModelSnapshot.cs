@@ -458,6 +458,9 @@ namespace Ostad.Forum.DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("QuestionId")
+                        .HasColumnType("int");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
@@ -470,6 +473,8 @@ namespace Ostad.Forum.DAL.Migrations
 
                     b.HasIndex("CommentId");
 
+                    b.HasIndex("QuestionId");
+
                     b.HasIndex("UserId", "AnswerId")
                         .IsUnique()
                         .HasFilter("[AnswerId] IS NOT NULL");
@@ -477,6 +482,10 @@ namespace Ostad.Forum.DAL.Migrations
                     b.HasIndex("UserId", "CommentId")
                         .IsUnique()
                         .HasFilter("[CommentId] IS NOT NULL");
+
+                    b.HasIndex("UserId", "QuestionId")
+                        .IsUnique()
+                        .HasFilter("[QuestionId] IS NOT NULL");
 
                     b.ToTable("Votes");
                 });
@@ -627,6 +636,11 @@ namespace Ostad.Forum.DAL.Migrations
                         .HasForeignKey("CommentId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("Ostad.Forum.Domain.Entities.Question", "Question")
+                        .WithMany("Votes")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Ostad.Forum.Domain.Entities.User", "User")
                         .WithMany("Votes")
                         .HasForeignKey("UserId")
@@ -636,6 +650,8 @@ namespace Ostad.Forum.DAL.Migrations
                     b.Navigation("Answer");
 
                     b.Navigation("Comment");
+
+                    b.Navigation("Question");
 
                     b.Navigation("User");
                 });
@@ -664,6 +680,8 @@ namespace Ostad.Forum.DAL.Migrations
                     b.Navigation("Answers");
 
                     b.Navigation("QuestionTags");
+
+                    b.Navigation("Votes");
                 });
 
             modelBuilder.Entity("Ostad.Forum.Domain.Entities.Tag", b =>

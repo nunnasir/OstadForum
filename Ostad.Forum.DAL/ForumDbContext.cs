@@ -128,6 +128,11 @@ public class ForumDbContext : IdentityDbContext<IdentityUser, IdentityRole, stri
                 .HasForeignKey(v => v.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            b.HasOne(v => v.Question)
+                .WithMany(q => q.Votes)
+                .HasForeignKey(v => v.QuestionId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             b.HasOne(v => v.Answer)
                 .WithMany(a => a.Votes)
                 .HasForeignKey(v => v.AnswerId)
@@ -138,6 +143,7 @@ public class ForumDbContext : IdentityDbContext<IdentityUser, IdentityRole, stri
                 .HasForeignKey(v => v.CommentId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            b.HasIndex(v => new { v.UserId, v.QuestionId }).IsUnique().HasFilter("[QuestionId] IS NOT NULL");
             b.HasIndex(v => new { v.UserId, v.AnswerId }).IsUnique().HasFilter("[AnswerId] IS NOT NULL");
             b.HasIndex(v => new { v.UserId, v.CommentId }).IsUnique().HasFilter("[CommentId] IS NOT NULL");
         });

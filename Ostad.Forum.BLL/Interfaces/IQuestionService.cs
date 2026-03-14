@@ -1,11 +1,11 @@
-using Ostad.Forum.Domain.Entities;
+using Ostad.Forum.Contract;
 
 namespace Ostad.Forum.BLL.Interfaces;
 
 public interface IQuestionService
 {
-    Task<Question?> GetByIdAsync(int questionId);
-    Task<IReadOnlyList<Question>> GetLatestQuestionsAsync(int take = 20);
+    Task<QuestionDetailsDto?> GetQuestionDetailsAsync(int questionId);
+    Task<IReadOnlyList<QuestionListItemDto>> GetLatestQuestionsAsync(int take = 20);
+    Task<CreateQuestionDto> GetCreatePageDataAsync();
     Task CreateQuestionAsync(string userEmail, string title, string description, int categoryId, IEnumerable<int> tagIds, IEnumerable<string> newTagNames);
 }
-

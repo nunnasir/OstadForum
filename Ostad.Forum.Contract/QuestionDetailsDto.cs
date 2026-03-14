@@ -1,6 +1,6 @@
-namespace Ostad.Forum.Web.Models;
+namespace Ostad.Forum.Contract;
 
-public class QuestionDetailsViewModel
+public class QuestionDetailsDto
 {
     public int QuestionId { get; set; }
     public string Title { get; set; } = null!;
@@ -11,5 +11,5 @@ public class QuestionDetailsViewModel
     public int ViewCount { get; set; }
     public int QuestionScore { get; set; }
     public List<string> TagNames { get; set; } = new();
-    public List<AnswerViewModel> Answers { get; set; } = new();
+    public List<AnswerDto> Answers { get; set; } = new();
 }

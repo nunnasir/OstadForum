@@ -1,15 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using Ostad.Forum.BLL.Interfaces;
+using Ostad.Forum.Contract;
 using Ostad.Forum.DAL.Interfaces;
 using Ostad.Forum.Domain.Entities;
 
 namespace Ostad.Forum.BLL.Services;
 
-public class QuestionService(IUnitOfWork unitOfWork) : IQuestionService
+public class QuestionService(IUnitOfWork unitOfWork, IVoteService voteService) : IQuestionService
 {
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IVoteService _voteService = voteService;
 
-    public async Task<Question?> GetByIdAsync(int questionId)
+    public async Task<QuestionDetailsDto?> GetQuestionDetailsAsync(int questionId)
     {
         var query = _unitOfWork.Questions
             .Query()
@@ -19,51 +21,83 @@ public class QuestionService(IUnitOfWork unitOfWork) : IQuestionService
             .Include(q => q.Answers).ThenInclude(a => a.User);
 
         var question = await query.FirstOrDefaultAsync(q => q.QuestionId == questionId);
-        if (question != null)
+        if (question == null)
+            return null;
+
+        question.ViewCount++;
+        _unitOfWork.Questions.Update(question);
+        await _unitOfWork.SaveChangesAsync();
+
+        var answerList = (question.Answers ?? new List<Answer>()).OrderBy(a => a.CreatedAt).ToList();
+        var answerDtos = new List<AnswerDto>();
+        foreach (var a in answerList)
         {
-            question.ViewCount++;
-            _unitOfWork.Questions.Update(question);
-            await _unitOfWork.SaveChangesAsync();
+            var score = await _voteService.GetAnswerScoreAsync(a.AnswerId);
+            answerDtos.Add(new AnswerDto
+            {
+                AnswerId = a.AnswerId,
+                Content = a.Content,
+                AuthorName = a.User?.Email ?? "",
+                CreatedAt = a.CreatedAt,
+                Score = score
+            });
         }
 
-        return question;
+        var questionScore = await _voteService.GetQuestionScoreAsync(question.QuestionId);
+
+        return new QuestionDetailsDto
+        {
+            QuestionId = question.QuestionId,
+            Title = question.Title,
+            Description = question.Description,
+            CategoryName = question.Category?.Name ?? "",
+            AuthorName = question.User?.Email ?? "",
+            CreatedAt = question.CreatedAt,
+            ViewCount = question.ViewCount,
+            QuestionScore = questionScore,
+            TagNames = question.QuestionTags?.Select(qt => qt.Tag.Name).ToList() ?? new List<string>(),
+            Answers = answerDtos
+        };
     }
 
-    public async Task<IReadOnlyList<Question>> GetLatestQuestionsAsync(int take = 20)
+    public async Task<IReadOnlyList<QuestionListItemDto>> GetLatestQuestionsAsync(int take = 20)
     {
         var queryable = _unitOfWork.Questions
             .Query()
             .Include(q => q.Category)
             .Include(q => q.Answers);
 
-        return await queryable
+        var questions = await queryable
             .OrderByDescending(q => q.CreatedAt)
             .Take(take)
             .ToListAsync();
+
+        return questions.Select(q => new QuestionListItemDto
+        {
+            QuestionId = q.QuestionId,
+            Title = q.Title,
+            CategoryName = q.Category?.Name ?? "",
+            CreatedAt = q.CreatedAt,
+            AnswerCount = q.Answers?.Count ?? 0,
+            ViewCount = q.ViewCount
+        }).ToList();
     }
 
-    private static string ToSlug(string text)
+    public async Task<CreateQuestionDto> GetCreatePageDataAsync()
     {
-        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
-        text = text.Trim().ToLowerInvariant();
-        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var slug = string.Join("-", parts);
-        var allowed = new char[slug.Length];
-        int j = 0;
-        for (int i = 0; i < slug.Length; i++)
+        var categories = await _unitOfWork.Categories.GetAllAsync();
+        var tags = await _unitOfWork.Tags.GetAllAsync();
+        return new CreateQuestionDto
         {
-            var c = slug[i];
-            if (char.IsLetterOrDigit(c) || c == '-') allowed[j++] = c;
-        }
-        return new string(allowed, 0, j).Trim('-') switch { { Length: 0 } s => "tag", var s => s };
+            Categories = categories.Select(c => new SelectOptionDto { Value = c.CategoryId.ToString(), Text = c.Name }).ToList(),
+            Tags = tags.Select(t => new SelectOptionDto { Value = t.TagId.ToString(), Text = t.Name }).ToList()
+        };
     }
 
     public async Task CreateQuestionAsync(string userEmail, string title, string description, int categoryId, IEnumerable<int> tagIds, IEnumerable<string> newTagNames)
     {
         if (string.IsNullOrWhiteSpace(userEmail))
-        {
             throw new ArgumentException("User email is required.", nameof(userEmail));
-        }
 
         var existingUsers = await _unitOfWork.Users.FindAsync(u => u.Email == userEmail);
         var user = existingUsers.FirstOrDefault();
@@ -77,7 +111,6 @@ public class QuestionService(IUnitOfWork unitOfWork) : IQuestionService
                 PasswordHash = string.Empty,
                 CreatedAt = DateTime.UtcNow
             };
-
             await _unitOfWork.Users.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
         }
@@ -91,12 +124,10 @@ public class QuestionService(IUnitOfWork unitOfWork) : IQuestionService
             ViewCount = 0,
             CreatedAt = DateTime.UtcNow
         };
-
         await _unitOfWork.Questions.AddAsync(question);
         await _unitOfWork.SaveChangesAsync();
 
         var distinctTagIds = tagIds.Distinct().ToList();
-
         var cleanedNewNames = newTagNames
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Select(n => n.Trim())
@@ -114,11 +145,9 @@ public class QuestionService(IUnitOfWork unitOfWork) : IQuestionService
                     distinctTagIds.Add(existing.TagId);
                     continue;
                 }
-
                 var slug = ToSlug(name);
                 var slugExists = allTags.Any(t => string.Equals(t.Slug, slug, StringComparison.OrdinalIgnoreCase));
                 var finalSlug = slugExists ? slug + "-" + DateTime.UtcNow.Ticks : slug;
-
                 var newTag = new Tag
                 {
                     Name = name,
@@ -133,7 +162,6 @@ public class QuestionService(IUnitOfWork unitOfWork) : IQuestionService
         }
 
         distinctTagIds = distinctTagIds.Distinct().ToList();
-
         foreach (var tagId in distinctTagIds)
         {
             await _unitOfWork.QuestionTags.AddAsync(new QuestionTag
@@ -142,8 +170,22 @@ public class QuestionService(IUnitOfWork unitOfWork) : IQuestionService
                 TagId = tagId
             });
         }
-
         await _unitOfWork.SaveChangesAsync();
     }
-}
 
+    private static string ToSlug(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        text = text.Trim().ToLowerInvariant();
+        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var slug = string.Join("-", parts);
+        var allowed = new char[slug.Length];
+        int j = 0;
+        for (int i = 0; i < slug.Length; i++)
+        {
+            var c = slug[i];
+            if (char.IsLetterOrDigit(c) || c == '-') allowed[j++] = c;
+        }
+        return new string(allowed, 0, j).Trim('-') switch { { Length: 0 } s => "tag", var s => s };
+    }
+}

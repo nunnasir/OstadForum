@@ -1,6 +1,6 @@
-namespace Ostad.Forum.Web.Models;
+namespace Ostad.Forum.Contract;
 
-public class AnswerViewModel
+public class AnswerDto
 {
     public int AnswerId { get; set; }
     public string Content { get; set; } = null!;

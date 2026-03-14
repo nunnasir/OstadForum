@@ -7,8 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\\Ostad.Forum.DAL\\Ostad.Forum.DAL.csproj" />
-    <ProjectReference Include="..\\Ostad.Forum.Contract\\Ostad.Forum.Contract.csproj" />
+    <ProjectReference Include="..\Ostad.Forum.Contract\Ostad.Forum.Contract.csproj" />
+    <ProjectReference Include="..\Ostad.Forum.DAL\Ostad.Forum.DAL.csproj" />
+    <ProjectReference Include="..\Ostad.Forum.Domain\Ostad.Forum.Domain.csproj" />
   </ItemGroup>
 
 </Project>

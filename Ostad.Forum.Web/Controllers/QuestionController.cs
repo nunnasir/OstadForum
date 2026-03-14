@@ -2,46 +2,46 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Ostad.Forum.BLL.Interfaces;
-using Ostad.Forum.DAL.Interfaces;
-using Ostad.Forum.Domain.Entities;
 using Ostad.Forum.Web.Models;
 
 namespace Ostad.Forum.Web.Controllers;
 
-public class QuestionController(IQuestionService questionService, IAnswerService answerService, IUnitOfWork unitOfWork) : Controller
+public class QuestionController(
+    IQuestionService questionService,
+    IAnswerService answerService,
+    IVoteService voteService) : Controller
 {
     private readonly IQuestionService _questionService = questionService;
     private readonly IAnswerService _answerService = answerService;
-    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IVoteService _voteService = voteService;
 
     [AllowAnonymous]
     public async Task<IActionResult> Details(int id)
     {
-        var question = await _questionService.GetByIdAsync(id);
-        if (question == null)
+        var dto = await _questionService.GetQuestionDetailsAsync(id);
+        if (dto == null)
             return NotFound();
 
         var model = new QuestionDetailsViewModel
         {
-            QuestionId = question.QuestionId,
-            Title = question.Title,
-            Description = question.Description,
-            CategoryName = question.Category?.Name ?? "",
-            AuthorName = question.User?.Email ?? "",
-            CreatedAt = question.CreatedAt,
-            ViewCount = question.ViewCount,
-            TagNames = question.QuestionTags?.Select(qt => qt.Tag.Name).ToList() ?? new List<string>(),
-            Answers = (question.Answers ?? new List<Answer>())
-                .OrderBy(a => a.CreatedAt)
-                .Select(a => new AnswerViewModel
-                {
-                    AnswerId = a.AnswerId,
-                    Content = a.Content,
-                    AuthorName = a.User?.Email ?? "",
-                    CreatedAt = a.CreatedAt
-                }).ToList()
+            QuestionId = dto.QuestionId,
+            Title = dto.Title,
+            Description = dto.Description,
+            CategoryName = dto.CategoryName,
+            AuthorName = dto.AuthorName,
+            CreatedAt = dto.CreatedAt,
+            ViewCount = dto.ViewCount,
+            QuestionScore = dto.QuestionScore,
+            TagNames = dto.TagNames,
+            Answers = dto.Answers.Select(a => new AnswerViewModel
+            {
+                AnswerId = a.AnswerId,
+                Content = a.Content,
+                AuthorName = a.AuthorName,
+                CreatedAt = a.CreatedAt,
+                Score = a.Score
+            }).ToList()
         };
-
         return View(model);
     }
 
@@ -68,14 +68,12 @@ public class QuestionController(IQuestionService questionService, IAnswerService
     [HttpGet]
     public async Task<IActionResult> Create()
     {
+        var dto = await _questionService.GetCreatePageDataAsync();
         var model = new QuestionCreateViewModel
         {
-            Categories = (await _unitOfWork.Categories.GetAllAsync())
-                .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.Name }),
-            Tags = (await _unitOfWork.Tags.GetAllAsync())
-                .Select(t => new SelectListItem { Value = t.TagId.ToString(), Text = t.Name })
+            Categories = dto.Categories.Select(c => new SelectListItem { Value = c.Value, Text = c.Text }),
+            Tags = dto.Tags.Select(t => new SelectListItem { Value = t.Value, Text = t.Text })
         };
-
         return View(model);
     }
 
@@ -86,18 +84,15 @@ public class QuestionController(IQuestionService questionService, IAnswerService
     {
         if (!ModelState.IsValid)
         {
-            model.Categories = (await _unitOfWork.Categories.GetAllAsync())
-                .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.Name });
-            model.Tags = (await _unitOfWork.Tags.GetAllAsync())
-                .Select(t => new SelectListItem { Value = t.TagId.ToString(), Text = t.Name });
+            var dto = await _questionService.GetCreatePageDataAsync();
+            model.Categories = dto.Categories.Select(c => new SelectListItem { Value = c.Value, Text = c.Text });
+            model.Tags = dto.Tags.Select(t => new SelectListItem { Value = t.Value, Text = t.Text });
             return View(model);
         }
 
         var email = User.Identity?.Name;
         if (string.IsNullOrEmpty(email))
-        {
             return Challenge();
-        }
 
         var newTagNames = (model.NewTags ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -108,10 +103,9 @@ public class QuestionController(IQuestionService questionService, IAnswerService
             model.Title,
             model.Description,
             model.CategoryId,
-            model.SelectedTagIds,
+            model.SelectedTagIds ?? new List<int>(),
             newTagNames);
 
         return RedirectToAction("Index", "Home");
     }
 }
-

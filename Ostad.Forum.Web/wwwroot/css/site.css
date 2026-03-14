@@ -29,3 +29,22 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* Profile dropdown – Logout item hover */
+.dropdown-item.text-danger:hover {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: var(--bs-danger) !important;
+}
+
+/* Colourful header */
+.navbar-header-custom {
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 50%, #084298 100%);
+}
+.navbar-header-custom .nav-link.text-white:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Navbar auth buttons */
+.navbar .btn-success { font-weight: 500; }
+.navbar .btn-warning { font-weight: 500; }
+.navbar .btn-light.dropdown-toggle { font-weight: 500; }

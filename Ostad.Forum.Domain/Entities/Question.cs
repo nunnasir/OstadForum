@@ -18,5 +18,6 @@ public class Question
     public Category Category { get; set; } = null!;
     public ICollection<QuestionTag> QuestionTags { get; set; } = new List<QuestionTag>();
     public ICollection<Answer> Answers { get; set; } = new List<Answer>();
+    public ICollection<Vote> Votes { get; set; } = new List<Vote>();
 }
 
