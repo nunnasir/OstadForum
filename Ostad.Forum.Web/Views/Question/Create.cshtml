@@ -1,0 +1,51 @@
+@model Ostad.Forum.Web.Models.QuestionCreateViewModel
+
+@{
+    ViewData["Title"] = "Ask Question";
+}
+
+<h2>Ask a Question</h2>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" rows="6"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="CategoryId" class="form-label"></label>
+        <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+            <option value="">-- Select Category --</option>
+        </select>
+        <span asp-validation-for="CategoryId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SelectedTagIds" class="form-label"></label>
+        <select asp-for="SelectedTagIds" asp-items="Model.Tags" class="form-select" multiple>
+        </select>
+        <div class="form-text">Hold Ctrl/Cmd to select multiple existing tags.</div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="NewTags" class="form-label"></label>
+        <input asp-for="NewTags" class="form-control" />
+        <span class="form-text">Example: asp.net, c#, sql-server</span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Post Question</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

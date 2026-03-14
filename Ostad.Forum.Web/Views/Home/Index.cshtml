@@ -1,0 +1,59 @@
+@model Ostad.Forum.Web.Models.HomeIndexViewModel
+
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Latest Questions</h1>
+
+    @if (User.Identity?.IsAuthenticated ?? false)
+    {
+        <a class="btn btn-primary" asp-controller="Question" asp-action="Create">
+            Ask Question
+        </a>
+    }
+    else
+    {
+        <a class="btn btn-outline-primary" asp-controller="Account" asp-action="Login">
+            Login to ask a question
+        </a>
+    }
+</div>
+
+@if (!Model.Questions.Any())
+{
+    <div class="alert alert-info">
+        No questions have been posted yet.
+        @if (!(User.Identity?.IsAuthenticated ?? false))
+        {
+            <span> Please <a asp-controller="Account" asp-action="Login">login</a> or <a asp-controller="Account" asp-action="Register">register</a> to ask the first question.</span>
+        }
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var q in Model.Questions)
+        {
+            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+                <div class="me-3 text-center" style="width: 100px;">
+                    <div class="fw-bold">@q.AnswerCount</div>
+                    <small class="text-muted">answers</small>
+                </div>
+                <div class="me-auto">
+                    <h5 class="mb-1">
+                        <a asp-controller="Question" asp-action="Details" asp-route-id="@q.QuestionId" class="text-decoration-none text-dark">@q.Title</a>
+                    </h5>
+                    <small class="text-muted">
+                        in @q.CategoryName • @q.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                    </small>
+                </div>
+                <div class="text-end" style="width: 80px;">
+                    <div class="fw-bold">@q.ViewCount</div>
+                    <small class="text-muted">views</small>
+                </div>
+            </div>
+        }
+    </div>
+}

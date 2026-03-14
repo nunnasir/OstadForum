@@ -1,0 +1,39 @@
+@model IEnumerable<Ostad.Forum.Domain.Entities.Category>
+
+@{
+    ViewData["Title"] = "Categories";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Categories</h1>
+    <a asp-action="Create" class="btn btn-primary">Create Category</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No categories found.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>Created At</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Name</td>
+                <td>@c.Slug</td>
+                <td>@c.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+

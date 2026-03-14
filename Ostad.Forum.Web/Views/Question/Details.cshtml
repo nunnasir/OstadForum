@@ -1,0 +1,72 @@
+@model Ostad.Forum.Web.Models.QuestionDetailsViewModel
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="mb-3">
+    <a asp-controller="Home" asp-action="Index" class="text-decoration-none">&larr; Back to questions</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h1 class="card-title h3">@Model.Title</h1>
+        <p class="text-muted small mb-2">
+            Asked @Model.CreatedAt.ToString("dd MMM yyyy 'at' HH:mm") &middot; @Model.ViewCount views &middot; in @Model.CategoryName
+            @if (Model.TagNames.Any())
+            {
+                <span> &middot; @string.Join(", ", Model.TagNames)</span>
+            }
+        </p>
+        <p class="mb-0">@Model.Description</p>
+        <p class="text-muted small mt-2 mb-0">By @Model.AuthorName</p>
+    </div>
+</div>
+
+<h5 class="mb-3">@Model.Answers.Count Answer(s)</h5>
+
+@if (Model.Answers.Any())
+{
+    @foreach (var answer in Model.Answers)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="mb-0">@answer.Content</p>
+                <p class="text-muted small mt-2 mb-0">@answer.AuthorName &middot; @answer.CreatedAt.ToString("dd MMM yyyy HH:mm")</p>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <p class="text-muted">No answers yet. Be the first to answer!</p>
+}
+
+@if (User.Identity?.IsAuthenticated ?? false)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0">Your Answer</h6>
+        </div>
+        <div class="card-body">
+            @if (TempData["AnswerError"] != null)
+            {
+                <div class="alert alert-warning">@TempData["AnswerError"]</div>
+            }
+            <form asp-controller="Question" asp-action="AddAnswer" method="post">
+                <input type="hidden" name="QuestionId" value="@Model.QuestionId" />
+                <div class="mb-3">
+                    <textarea name="Content" class="form-control" rows="4" placeholder="Write your answer..."></textarea>
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Content" data-valmsg-replace="true"></span>
+                </div>
+                <button type="submit" class="btn btn-primary">Post Answer</button>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info mt-4">
+        <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path">Log in</a> to post an answer.
+    </div>
+}
