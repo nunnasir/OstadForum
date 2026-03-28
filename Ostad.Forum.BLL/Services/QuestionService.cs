@@ -65,7 +65,8 @@ public class QuestionService(IUnitOfWork unitOfWork, IVoteService voteService) :
         var queryable = _unitOfWork.Questions
             .Query()
             .Include(q => q.Category)
-            .Include(q => q.Answers);
+            .Include(q => q.Answers)
+            .Include(q => q.QuestionTags).ThenInclude(qt => qt.Tag);
 
         var questions = await queryable
             .OrderByDescending(q => q.CreatedAt)
@@ -76,7 +77,9 @@ public class QuestionService(IUnitOfWork unitOfWork, IVoteService voteService) :
         {
             QuestionId = q.QuestionId,
             Title = q.Title,
+            CategoryId = q.CategoryId,
             CategoryName = q.Category?.Name ?? "",
+            TagIds = q.QuestionTags?.Select(qt => qt.TagId).Distinct().ToList() ?? new List<int>(),
             CreatedAt = q.CreatedAt,
             AnswerCount = q.Answers?.Count ?? 0,
             ViewCount = q.ViewCount

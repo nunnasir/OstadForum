@@ -4,7 +4,7 @@
     ViewData["Title"] = "Home";
 }
 
-@* Filter bar - wire functionality later *@
+@* Filter bar *@
 <div class="card border-0 shadow-sm rounded-3 mb-4">
     <div class="card-body py-3">
         <div class="row g-2 align-items-end flex-wrap">
@@ -85,11 +85,21 @@
         }
         else
         {
-            <div class="d-flex flex-column gap-3">
+            <div id="questionsEmptyFilter" class="alert alert-light border text-center py-4 d-none" role="status">
+                No questions match your filters. Try adjusting search, category, tag, or sort, or click <strong>Clear</strong>.
+            </div>
+            <div class="d-flex flex-column gap-3" id="questionsList">
                 @foreach (var q in Model.Questions)
                 {
                     <a asp-controller="Question" asp-action="Details" asp-route-id="@q.QuestionId"
-                       class="card border-0 shadow-sm rounded-3 text-decoration-none text-dark question-card">
+                       class="card border-0 shadow-sm rounded-3 text-decoration-none text-dark question-card"
+                       data-question-id="@q.QuestionId"
+                       data-category-id="@q.CategoryId"
+                       data-tag-ids="@string.Join(",", q.TagIds)"
+                       data-created="@q.CreatedAt.ToUniversalTime().ToString("o")"
+                       data-answers="@q.AnswerCount"
+                       data-views="@q.ViewCount"
+                       data-title="@q.Title">
                         <div class="card-body p-4">
                             <div class="row align-items-center">
                                 <div class="col-auto text-center pe-3">
@@ -210,4 +220,137 @@
         color: #fff;
         border-radius: calc(0.5rem - 2px) calc(0.5rem - 2px) 0 0;
     }
+    .sidebar-link.is-active,
+    .tag-pill.is-active {
+        background-color: rgba(13, 110, 253, 0.2) !important;
+        color: var(--bs-primary) !important;
+        font-weight: 600;
+    }
+    .sidebar-card-tags .tag-pill.is-active {
+        background-color: rgba(25, 135, 84, 0.2) !important;
+        color: var(--bs-success) !important;
+    }
 </style>
+
+@section Scripts {
+    <script>
+        (function () {
+            var searchEl = document.getElementById('filterSearch');
+            var categoryEl = document.getElementById('filterCategory');
+            var tagEl = document.getElementById('filterTag');
+            var sortEl = document.getElementById('filterSort');
+            var listEl = document.getElementById('questionsList');
+            var emptyFilterEl = document.getElementById('questionsEmptyFilter');
+            if (!listEl) return;
+
+            function parseTagIds(raw) {
+                if (!raw || !raw.trim()) return [];
+                return raw.split(',').map(function (s) { return parseInt(s.trim(), 10); }).filter(function (n) { return !isNaN(n); });
+            }
+
+            function cardMatches(card) {
+                var q = (searchEl.value || '').trim().toLowerCase();
+                var cat = categoryEl.value;
+                var tag = tagEl.value;
+                var title = (card.dataset.title || '').toLowerCase();
+                if (q && title.indexOf(q) === -1) return false;
+                if (cat && String(card.dataset.categoryId) !== cat) return false;
+                if (tag) {
+                    var ids = parseTagIds(card.dataset.tagIds || '');
+                    if (ids.indexOf(parseInt(tag, 10)) === -1) return false;
+                }
+                return true;
+            }
+
+            function sortCards(cards) {
+                var key = sortEl.value;
+                var sorted = cards.slice();
+                sorted.sort(function (a, b) {
+                    if (key === 'oldest') {
+                        return new Date(a.dataset.created) - new Date(b.dataset.created);
+                    }
+                    if (key === 'most-answers') {
+                        return parseInt(b.dataset.answers, 10) - parseInt(a.dataset.answers, 10);
+                    }
+                    if (key === 'most-views') {
+                        return parseInt(b.dataset.views, 10) - parseInt(a.dataset.views, 10);
+                    }
+                    return new Date(b.dataset.created) - new Date(a.dataset.created);
+                });
+                return sorted;
+            }
+
+            function updateSidebarActiveState() {
+                var catVal = categoryEl.value;
+                var tagVal = tagEl.value;
+                document.querySelectorAll('.sidebar-link').forEach(function (el) {
+                    el.classList.toggle('is-active', catVal && el.getAttribute('data-category-id') === catVal);
+                });
+                document.querySelectorAll('.tag-pill').forEach(function (el) {
+                    el.classList.toggle('is-active', tagVal && el.getAttribute('data-tag-id') === tagVal);
+                });
+            }
+
+            function applyFilters() {
+                var cards = Array.prototype.slice.call(listEl.querySelectorAll('.question-card'));
+                var matching = cards.filter(cardMatches);
+                var ordered = sortCards(matching);
+                cards.forEach(function (c) { c.classList.add('d-none'); });
+                ordered.forEach(function (c) {
+                    c.classList.remove('d-none');
+                    listEl.appendChild(c);
+                });
+                if (emptyFilterEl) {
+                    emptyFilterEl.classList.toggle('d-none', ordered.length > 0);
+                }
+                updateSidebarActiveState();
+            }
+
+            function clearFilters() {
+                searchEl.value = '';
+                categoryEl.value = '';
+                tagEl.value = '';
+                sortEl.value = 'newest';
+                applyFilters();
+            }
+
+            document.getElementById('filterApply').addEventListener('click', applyFilters);
+            document.getElementById('filterClear').addEventListener('click', clearFilters);
+            searchEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyFilters();
+                }
+            });
+
+            document.querySelectorAll('.sidebar-link[data-category-id]').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var id = link.getAttribute('data-category-id') || '';
+                    if (categoryEl.value === id) {
+                        categoryEl.value = '';
+                    } else {
+                        categoryEl.value = id;
+                        tagEl.value = '';
+                    }
+                    applyFilters();
+                });
+            });
+            document.querySelectorAll('.tag-pill[data-tag-id]').forEach(function (pill) {
+                pill.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var id = pill.getAttribute('data-tag-id') || '';
+                    if (tagEl.value === id) {
+                        tagEl.value = '';
+                    } else {
+                        tagEl.value = id;
+                        categoryEl.value = '';
+                    }
+                    applyFilters();
+                });
+            });
+
+            applyFilters();
+        })();
+    </script>
+}

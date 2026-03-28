@@ -27,7 +27,9 @@ public class HomeController(
             {
                 QuestionId = q.QuestionId,
                 Title = q.Title,
+                CategoryId = q.CategoryId,
                 CategoryName = q.CategoryName,
+                TagIds = q.TagIds,
                 CreatedAt = q.CreatedAt,
                 AnswerCount = q.AnswerCount,
                 ViewCount = q.ViewCount
